@@ -11,125 +11,44 @@ ctx.clearRect(0, 0, canvas.width, canvas.height);
 ctx.fillStyle = 'black';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-const fov = 110*Math.PI/180;
+const fov = 90*Math.PI/180;
 
 // opengl view plane: x right, y up, right hand rule z out the page. forward = into page = -3
 const camera = {
-    position: vec3(0, 0, 10),
+    position: vec3(0, 12, 20),
     forward: vec3(0, 0, -1),
     right: vec3(1, 0, 0),
     up: vec3(0, 1, 0)
 };
 
-const MAX_DEPTH = 100;
-const backgroundColor = vec3(0.5, 0.5, 0.5);
+rotateCamera(0, -0.3);
 
-const ambientLight = vec3(1.0, 1.0, 1.0);
-
-const lights = [];
-lights.push(
-    {position: vec3(0, 5, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
-    {position: vec3(0, -5, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
-    // {position: vec3(-5, 0, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
-    // {position: vec3(5, 0, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))}
-);
-
-// let width = 8;
-// let num_across = 1;
-// let radius = width/num_across/2;
-
-// for (let y = -width/2; y <= width/2; y += 2*radius) {
-//     for (let x = -width/2; x <= width/2; x += 2*radius) {
-//         objs.push({
-//             position: vec3(x,y,0),
-//             radius: radius,
-//             mat: createMaterial(vec3(0.5,0.5,1),1)
-//         })
-//     }
-// }
-
-let t = 0.9;
+let t = 0;
 let a = 0.7;
 
 const H = 10;
 
-const objs = [];
-objs.push(
-    {
-        position: vec3(0, 0, 0),
-        radius: 4.25,
-        mat: createMaterial(vec3(0.5,0.5,0.5), 0.9)
-    }
-)
+const MAX_DEPTH = 30;
+const backgroundColor = vec3(0, 0.5, 0.5);
 
-function generateUVSphere(radius, stacks, slices) {
-    let verts = []; // flat array of triangles: [x,y,z, x,y,z, ...]
+const ambientLight = vec3(1.0, 1.0, 1.0);
 
-    for (let i = 0; i < stacks; i++) {
-        let theta1 = Math.PI * i / stacks;
-        let theta2 = Math.PI * (i+1) / stacks;
+const add_cubes = true;
 
-        for (let j = 0; j < slices; j++) {
-            let phi1 = 2 * Math.PI * j / slices;
-            let phi2 = 2 * Math.PI * (j+1) / slices;
+const torus_reflect = 0.5;
+const sphere_reflect = 0.5;
 
-            // 4 corners of the patch
-            let p1 = sphericalToCartesian(radius, theta1, phi1);
-            let p2 = sphericalToCartesian(radius, theta2, phi1);
-            let p3 = sphericalToCartesian(radius, theta2, phi2);
-            let p4 = sphericalToCartesian(radius, theta1, phi2);
+const origin0 = vec3(0,0,0);
 
-            // two triangles: (p1,p2,p3) and (p1,p3,p4)
-            verts.push(...p1, ...p2, ...p3);
-            verts.push(...p1, ...p3, ...p4);
-        }
-    }
-    return verts;
-}
-
-function sphericalToCartesian(r, theta, phi) {
-    return [
-        r * Math.sin(theta) * Math.cos(phi),
-        r * Math.cos(theta),
-        r * Math.sin(theta) * Math.sin(phi),
-    ];
-}
-
-function vertsToTriangles(verts) {
-    let arr = [];
-
-    for (let i = 0; i < verts.length/9; i++) {
-        arr.push({
-            v0: vec3(verts[i*9+0], verts[i*9+1], verts[i*9+2]),
-            v1: vec3(verts[i*9+3], verts[i*9+4], verts[i*9+5]),
-            v2: vec3(verts[i*9+6], verts[i*9+7], verts[i*9+8]),
-            mat: createMaterial(vec3(0, 0, 0.5))
-        });
-    }
-
-    return arr;
-}
-
-// quick helper to set a material color on a triangle array
-function paint(tris, colorVec3, reflectivity=0, isPortal=false) {
-    for (const t of tris) t.mat = createMaterial(colorVec3, reflectivity);
-    return tris;
-}
-
-// Each face defined by 4 corners in CCW order as seen from outside,
-// then split into two triangles: (0,1,2) and (0,2,3).
-function quadToVerts(a, b, c, d) {
-    return [
-        ...a, ...b, ...c,   // tri 1
-        ...a, ...c, ...d    // tri 2
-    ];
-}
+const x_scale = 2.5;
+const y_scale = 1.5;
+const z_scale = 2.5;
 
 // Corners (±H on each axis)
-const nXnYnZ = [-H, -H, -H], nXnYpZ = [-H, -H,  H],
-      nXpYnZ = [-H,  H, -H], nXpYpZ = [-H,  H,  H],
-      pXnYnZ = [ H, -H, -H], pXnYpZ = [ H, -H,  H],
-      pXpYnZ = [ H,  H, -H], pXpYpZ = [ H,  H,  H];
+const nXnYnZ = [-H * x_scale, -H * y_scale, -H * z_scale], nXnYpZ = [-H * x_scale, -H * y_scale,  H * z_scale],
+      nXpYnZ = [-H * x_scale,  H * y_scale, -H * z_scale], nXpYpZ = [-H * x_scale,  H * y_scale,  H * z_scale],
+      pXnYnZ = [ H * x_scale, -H * y_scale, -H * z_scale], pXnYpZ = [ H * x_scale, -H * y_scale,  H * z_scale],
+      pXpYnZ = [ H * x_scale,  H * y_scale, -H * z_scale], pXpYpZ = [ H * x_scale,  H * y_scale,  H * z_scale];
 
 // +X face (x = +H), outward normal +X
 const vertsPosX = quadToVerts(
@@ -159,12 +78,15 @@ const vertsNegZ = quadToVerts(
 );
 
 // Convert verts → triangles, then paint each face a different color
-const trisPosX = paint(vertsToTriangles(vertsPosX), vec3(a, 0, 0), t); // red
-const trisNegX = paint(vertsToTriangles(vertsNegX), vec3(0, a, 0), t); // green
-const trisPosY = paint(vertsToTriangles(vertsPosY), vec3(0, 0, a), t); // blue
-const trisNegY = paint(vertsToTriangles(vertsNegY), vec3(a, a, 0), t); // yellow
-const trisPosZ = paint(vertsToTriangles(vertsPosZ), vec3(a, 0, a), t, true); // magenta
-const trisNegZ = paint(vertsToTriangles(vertsNegZ), vec3(0, a, a), t); // cyan
+const trisPosX = paint(vertsToTriangles(vertsPosX), vec3(0.5*a, 0, a), 0.5); // for now purple
+// const trisPosX = paint(vertsToTriangles(vertsPosX), vec3(a, 0, 0), t); // red
+const trisNegX = paint(vertsToTriangles(vertsNegX), vec3(0, a, 0), 0.75); // green
+const trisPosY = paint(vertsToTriangles(vertsPosY), vec3(0, 0, a), 0.75, true); // blue
+const trisNegY = paint(vertsToTriangles(vertsNegY), vec3(0.5*a, 0.5*a, 0), 0.5); // yellow
+const trisPosZ = paint(vertsToTriangles(vertsPosZ), vec3(0.5*a, 0.5*a, a), 0.5, true); // magenta
+// const trisPosZ = paint(vertsToTriangles(vertsPosZ), vec3(a, 0, a), t); // magenta
+// const trisNegZ = paint(vertsToTriangles(vertsNegZ), vec3(0, a, a), t); // cyan
+const trisNegZ = paint(vertsToTriangles(vertsNegZ), vec3(0, 0.5*a, a), 0.5); // cyan
 
 // Final cube triangle list
 const cubeTris = [
@@ -176,7 +98,271 @@ const cubeTris = [
   ...trisNegZ
 ];
 
-const triangles = [...cubeTris];
+// this is like the vertex array
+let triangles = [];
+// if (add_cubes) triangles = [...cubeTris];
+// triangles = [...torusVerticesToTriangles(makeObj(vec3(0, 3, 0), origin0, vec4(7,2,20,10), vec3(0,Math.PI/2,0), "torus"))]
+triangles.push(...cubeTris);
+triangles.push(...sphereVertsToTriangle(vec3(0,1,0), 10,10,10));
+
+const lights = [];
+let emissive = vec3(1,1,1);
+lights.push(
+    {position: vec3(0, 13, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
+    {position: vec3(-6, 10, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
+    {position: vec3(10, 5, 10), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
+    // {position: vec3(0, -5, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
+    // {position: vec3(-5, 0, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
+    // {position: vec3(5, 0, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))}
+);
+
+// let width = 8;
+// let num_across = 1;
+// let radius = width/num_across/2;
+
+// for (let y = -width/2; y <= width/2; y += 2*radius) {
+//     for (let x = -width/2; x <= width/2; x += 2*radius) {
+//         objs.push({
+//             position: vec3(x,y,0),
+//             radius: radius,
+//             mat: createMaterial(vec3(0.5,0.5,1),1)
+//         })
+//     }
+// }
+
+const objs = [];
+objs.push(
+    // {
+    //     position: vec3(0, -7, 0),
+    //     radius: 10,
+    //     mat: createMaterial(vec3(1.5,0,0), 0.5)
+    // },
+    // {
+    //     position: vec3(0, 5, 0),
+    //     radius: 2,
+    //     mat: createMaterial(vec3(0,1,1), 0.7)
+    // }
+)
+
+function sphereVertsToTriangle(position, radius, stacks, slices) {
+    let verts = []; // flat array of triangles: [x,y,z, x,y,z, ...]
+
+    for (let i = 0; i < stacks; i++) {
+        let theta1 = Math.PI * i / stacks;
+        let theta2 = Math.PI * (i+1) / stacks;
+
+        for (let j = 0; j < slices; j++) {
+            let phi1 = 2 * Math.PI * j / slices;
+            let phi2 = 2 * Math.PI * (j+1) / slices;
+
+            // 4 corners of the patch
+            let p1 = vec3add(position, sphericalToCartesian(radius, theta1, phi1));
+            let p2 = vec3add(position, sphericalToCartesian(radius, theta2, phi1));
+            let p3 = vec3add(position, sphericalToCartesian(radius, theta2, phi2));
+            let p4 = vec3add(position, sphericalToCartesian(radius, theta1, phi2));
+
+            // two triangles: (p1,p2,p3) and (p1,p3,p4)
+            verts.push({
+                v0: p1,
+                v1: p2,
+                v2: p3,
+                mat: createMaterial(vec3(Math.random() * 0.3 + 0.2,0,Math.random() * 0.3 + 0.2), sphere_reflect)
+            });
+            verts.push({
+                v0: p1,
+                v1: p3,
+                v2: p4,
+                mat: createMaterial(vec3(Math.random() * 0.3 + 0.2,0,Math.random() * 0.3 + 0.2), sphere_reflect)
+            });
+        }
+    }
+    return verts;
+}
+
+function sphericalToCartesian(r, theta, phi) {
+    return vec3(
+        r * Math.sin(theta) * Math.cos(phi),
+        r * Math.cos(theta),
+        r * Math.sin(theta) * Math.sin(phi),
+    );
+}
+
+function vertsToTriangles(verts) {
+    let arr = [];
+
+    for (let i = 0; i < verts.length/9; i++) {
+        arr.push({
+            v0: vec3(verts[i*9+0], verts[i*9+1], verts[i*9+2]),
+            v1: vec3(verts[i*9+3], verts[i*9+4], verts[i*9+5]),
+            v2: vec3(verts[i*9+6], verts[i*9+7], verts[i*9+8]),
+            mat: createMaterial(vec3(0, 0, 0.5))
+        });
+    }
+
+    return arr;
+}
+
+// Torus
+function torusVerticesToTriangles(obj) {
+    let { x: R, y: r, z: segments, a: sides } = obj.dim;
+    // R = major radius, r = minor radius
+    // z = segments (around main circle), a = sides (tube subdivisions)
+    let yaw = obj.orientation.x;
+    let pitch = obj.orientation.y;
+    let roll = obj.orientation.z;
+    let position = obj.position;
+
+    const color_buffer = [];
+    color_buffer.push(
+        1,0,0,
+        0,1,0,
+        0,0,1,
+        1,0,1,
+        0,1,1,
+        1,1,0,
+    );
+
+    for (let i = 0; i < 4; i++) color_buffer.push(...color_buffer);
+
+    let vertex_buffer = [];
+    for (let i = 0; i < segments; i++) {
+        let theta0 = (i / segments) * 2 * Math.PI;
+        let theta1 = ((i + 1) / segments) * 2 * Math.PI;
+
+        for (let j = 0; j < sides; j++) {
+            let phi0 = (j / sides) * 2 * Math.PI;
+            let phi1 = ((j + 1) / sides) * 2 * Math.PI;
+
+            // four corners of the quad
+            let v00 = torusPoint(R, r, theta0, phi0);
+            let v01 = torusPoint(R, r, theta0, phi1);
+            let v10 = torusPoint(R, r, theta1, phi0);
+            let v11 = torusPoint(R, r, theta1, phi1);
+
+            let quad = [v00, v10, v11, v01]; // order
+
+            // apply rotation + position
+            let verts = quad.map(v => {
+                let v_rot = rotateVertex(vec3(v[0], v[1], v[2]), origin0, yaw, pitch, roll);
+                v_rot = vec3add(v_rot, position);
+                return [v_rot.x, v_rot.y, v_rot.z];
+            });
+
+            // split quad into 2 triangles
+            vertex_buffer.push({
+                v0: vec3(...verts[0]),
+                v1: vec3(...verts[2]),
+                v2: vec3(...verts[1]),
+                mat: createMaterial(vec3(Math.random() * 0.3 + 0.2,0,Math.random() * 0.3 + 0.2), torus_reflect)
+            });
+            vertex_buffer.push({
+                v0: vec3(...verts[0]),
+                v1: vec3(...verts[3]),
+                v2: vec3(...verts[2]),
+                mat: createMaterial(vec3(Math.random() * 0.3 + 0.2,0,Math.random() * 0.3 + 0.2), torus_reflect)
+            });
+
+            // vertex_buffer.push(...verts[0], ...verts[2], ...verts[1]);
+            // vertex_buffer.push(...verts[0], ...verts[3], ...verts[2]);
+        }
+    }
+    return vertex_buffer;
+}
+
+function torusPoint(R, r, theta, phi) {
+    let x = (R + r * Math.cos(phi)) * Math.cos(theta);
+    let y = (R + r * Math.cos(phi)) * Math.sin(theta);
+    let z = r * Math.sin(phi);
+    return [x, y, z];
+}
+
+// quick helper to set a material color on a triangle array
+function paint(tris, colorVec3, reflectivity=0, isPortal=false) {
+    for (const t of tris) t.mat = createMaterial(colorVec3, reflectivity, isPortal);
+    return tris;
+}
+
+// Each face defined by 4 corners in CCW order as seen from outside,
+// then split into two triangles: (0,1,2) and (0,2,3).
+function quadToVerts(a, b, c, d) {
+    return [
+        ...a, ...b, ...c,   // tri 1
+        ...a, ...c, ...d    // tri 2
+    ];
+}
+
+function makeObj(position, color, dim, orientation, type) {
+    return {position, color, dim, orientation, type};
+}
+
+function vec4(x,y,z,a) {
+    return {x, y, z, a}
+}
+
+function rotateVertex(v, center, yaw, pitch, roll) {
+    let pitchMat = mat3([
+        1,               0,               0,
+        0, Math.cos(pitch), -Math.sin(pitch),
+        0, Math.sin(pitch),  Math.cos(pitch)
+    ]);
+    let rollMat = mat3([
+        Math.cos(roll), -Math.sin(roll), 0,
+        Math.sin(roll),  Math.cos(roll), 0,
+        0,               0,              1
+    ]);
+    let yawMat = mat3([
+        Math.cos(yaw),  0,  -Math.sin(yaw),
+        0,              1,               0,
+        Math.sin(yaw),  0,   Math.cos(yaw)
+    ]);
+
+    // order doesnt matter as long as they are all before vec
+    let res = matMult(rollMat, pitchMat);
+    res = matMult(res, yawMat);
+    res = matMultVec(res, vec3sub(v, center));
+    return vec3add(res, center);
+}
+
+function matMultVec(mat, v) {
+    let res = matMult(mat, vecToMat(v));
+    return vec3(res.data[0], res.data[1], res.data[2]);
+}
+
+/** returns `mat1` x `mat2` */
+function matMult(mat1, mat2) {
+    if (mat1.n !== mat2.m) throw new Error("multiplying incompatible matrix dimensions of " + mat1.n + " x " + mat2.m);
+
+    let mat = {m: mat1.m, n: mat2.n, data: []};
+    let m1 = mat1.m;
+    let n1 = mat1.n; // n1 and m2 must be equal, dont need two
+    // let m2 = mat2.m;
+    let n2 = mat2.n;
+    for (let m1_idx = 0; m1_idx < m1; m1_idx++) {
+        for (let n2_idx = 0; n2_idx < n2; n2_idx++) {
+            let sum = 0;
+            for (let n1_idx = 0; n1_idx < n1; n1_idx++) {
+                // matrix format = i * m + n
+                // will be flipped reading mat2, mat2 stored as i * m + n, but i need data as i * n + m
+                
+                let mat1n = mat1.data[m1_idx * n1 + n1_idx];
+                let mat2n = mat2.data[n1_idx * n2 + n2_idx];
+
+                sum += mat1n * mat2n;
+            }
+            mat.data.push(sum);
+        }
+    }
+    return mat;
+}
+
+function vecToMat(v) {
+    return {m:3, n:1, data: [v.x, v.y, v.z]};
+}
+
+function mat3(data) {
+    if (data.length === 0) throw new Error("cannot create matrix with empty data");
+    return {m: 3, n: 3, data};
+}
 
 function vec3(x, y, z) {
     return {x: x, y: y, z: z};
@@ -250,8 +436,6 @@ function rotateCamera(yaw, pitch) {
     camera.up = normalize(vec3cross(camera.right, camera.forward));
 }
 
-rotateCamera(0, 0);
-
 function makeRayFromCameraThroughPixel(x, y) {
     // idea: look into point in front of camera in 3D space (called the view plane). each pixel = spot on plane. origin = camera position, direction = camera pos to spot on view plane
 
@@ -278,8 +462,8 @@ function makeRayFromCameraThroughPixel(x, y) {
 }
 
 // color: vec3, add other things later
-function createMaterial(color, reflectivity=0, emissive = vec3(0, 0, 0)) {
-    return {color: color, reflectivity, reflectivity, emissive};
+function createMaterial(color, reflectivity=0, emissive = vec3(0, 0, 0), isPortal=false) {
+    return {color: color, reflectivity, reflectivity, emissive, isPortal};
 }
 
 // this would be a struct in c code
@@ -288,6 +472,7 @@ function createHitData(t, position, normal, obj_mat) {
 }
 
 function intersectSphere(ray, sphere) {
+    if (vec3dot(ray.dir, vec3sub(sphere.position, ray.origin)) < 0) return null;
     // ...
     let oc = vec3sub(ray.origin, sphere.position);
     let a = vec3dot(ray.dir, ray.dir); // should be 1 if normalized
@@ -322,6 +507,7 @@ function intersectTriangle(ray, triangle) {
     let v0 = triangle.v0;
     let v1 = triangle.v1;
     let v2 = triangle.v2;
+    if (vec3dot(ray.dir, vec3sub(v0, ray.origin)) < 0) return null;
 
     let edge1 = vec3sub(v1, v0);
     let edge2 = vec3sub(v2, v0);
@@ -435,6 +621,14 @@ function isInShadow(ray, light) {
         if (dist >= ray_light_dist) continue; // object behind light doesnt count
         else if (dist < ray_light_dist) return true; // object between light and ray, is in shadow, return true
     }
+
+    // Check triangle occluders
+    for (const tri of triangles) {
+        const hit = intersect(ray, tri);
+        if (!hit) continue;
+        const d = hit.t;
+        if (d > 1e-6 && d < ray_light_dist - 1e-6) return true;
+    }
     
     return false;
 }
@@ -458,18 +652,18 @@ function traceRay(ray, depth, allowPortal=false) {
     let normal = hit.normal;
     let mat = hit.mat;
 
-    if (mat.isPortal) {
+    if (mat.isPortal && allowPortal) {
         // Skip this hit: continue ray just past the wall
         let newOrigin = vec3add(hit.position, vec3scale(1e-4, ray.dir));
         return traceRay(makeRay(newOrigin, ray.dir), depth, false);
     }
 
-    if (mat.emissive && (mat.emissive.x > 0 || mat.emissive.y > 0 || mat.emissive.z > 0)) {
-        return mat.emissive;
-    }
-
     // start with ambient light, then add contrib from every light source
     let finalColor = vec3mul(ambientLight, mat.color);
+
+    if (mat.emissive && (mat.emissive.x > 0 || mat.emissive.y > 0 || mat.emissive.z > 0)) {
+        finalColor = vec3add(finalColor, mat.emissive);
+    }
 
     for (const light of lights) {
         // add small episilon along normal to avoid ray hitting own object
