@@ -7,6 +7,14 @@ A fully custom CPU raytracer written from scratch in JavaScript. This project:
 
 No external tools such as WebGL or Three.js were used in this project.
 
+## How To Run
+Git clone this repository via
+```git
+git clone https://github.com/mojofill/raytracer-js.git
+```
+
+Open `index.html` in your preferred browser and wait for the image to render!
+
 ## What is Raytracing? 🔦
 In the real world, light rays scatters from a source in all different directions. Only the rays that manage to reach your eyes are the ones you percieve. In raytracing, the opposite happens: you shoot rays from your eyes (like Superman!) into the scene, and the rays that manage to hit a light source are the ones that are rendered.
 
@@ -29,7 +37,7 @@ All objects can be broken down into triangles. In this project, spheres, tori, a
 
 However, sphere's have a nice property: the normal of a sphere is simply `intersectionPoint - sphereCenter`. This makes calculating reflections and intersection much easier and less computationally expensive than triangulating the sphere.
 
-# NOTE - MAKE A COMPARISON BETWEEN TRIANGULATED SPHERE VS ANALYTICAL SPHERE: use images
+*See Screenshots to see the difference between a triangulated sphere versus an analytical sphere*
 
 ## Materials
 ```js
@@ -71,6 +79,12 @@ Lights contribute to shading and also count as geometric hits. This is done by a
 
 ![image3.png](./images/image3.png)
 *Torus and sphere in a different angle*
+
+![image5.png](./images/image5.png)
+*Triangulated sphere*
+
+![image7.png](./images/image7.png)
+*Analytical sphere*
 
 ## Notes
 This project currently only supports user defined polygon meshes. In the future I would like to be able to render `.obj` or `.blender` objects in the scene. I also would like to speed up the render time by implementing `WebGPU` or `WegGL` and use the GPU to accelerate computation.

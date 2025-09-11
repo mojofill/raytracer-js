@@ -28,7 +28,7 @@ let a = 0.7;
 
 const H = 10;
 
-const MAX_DEPTH = 30;
+const MAX_DEPTH = 40;
 const backgroundColor = vec3(0, 0.5, 0.5);
 
 const ambientLight = vec3(1.0, 1.0, 1.0);
@@ -103,14 +103,14 @@ let triangles = [];
 // if (add_cubes) triangles = [...cubeTris];
 // triangles = [...torusVerticesToTriangles(makeObj(vec3(0, 3, 0), origin0, vec4(7,2,20,10), vec3(0,Math.PI/2,0), "torus"))]
 triangles.push(...cubeTris);
-triangles.push(...sphereVertsToTriangle(vec3(0,1,0), 10,10,10));
+// triangles.push(...sphereVertsToTriangle(vec3(0,1,0), 10,10,10));
 
 const lights = [];
 let emissive = vec3(1,1,1);
 lights.push(
     {position: vec3(0, 13, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
     {position: vec3(-6, 10, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
-    {position: vec3(10, 5, 10), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
+    // {position: vec3(10, 5, 10), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, emissive)},
     // {position: vec3(0, -5, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
     // {position: vec3(-5, 0, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))},
     // {position: vec3(5, 0, 0), color: vec3(1.0, 1.0, 1.0), radius: 0.5, mat: createMaterial(vec3(0,0,0), 0, vec3(1,1,1))}
@@ -130,13 +130,13 @@ lights.push(
 //     }
 // }
 
-const objs = [];
+const objs = []; vec3(0,1,0), 10,10,10
 objs.push(
-    // {
-    //     position: vec3(0, -7, 0),
-    //     radius: 10,
-    //     mat: createMaterial(vec3(1.5,0,0), 0.5)
-    // },
+    {
+        position: vec3(0, 1, 0),
+        radius: 10,
+        mat: createMaterial(vec3(0.4,0,0.4), 0.5)
+    },
     // {
     //     position: vec3(0, 5, 0),
     //     radius: 2,
@@ -472,7 +472,8 @@ function createHitData(t, position, normal, obj_mat) {
 }
 
 function intersectSphere(ray, sphere) {
-    if (vec3dot(ray.dir, vec3sub(sphere.position, ray.origin)) < 0) return null;
+    // removed aggressive intersection
+    // if (vec3dot(ray.dir, vec3sub(sphere.position, ray.origin)) < 0) return null;
     // ...
     let oc = vec3sub(ray.origin, sphere.position);
     let a = vec3dot(ray.dir, ray.dir); // should be 1 if normalized
@@ -491,8 +492,8 @@ function intersectSphere(ray, sphere) {
 
     let t; // distance to hit. figure out which one is the valid one. if neither are valid then that means the obj is behind the ray i think
 
-    if (t1 > 0) t = t1;
-    else if (t2 > 0) t = t2;
+    if (t1 > 1e-6) t = t1;
+    else if (t2 > 1e-6) t = t2;
     else return null;
 
     let hitPoint = vec3add(ray.origin, vec3scale(t, ray.dir));
@@ -507,7 +508,7 @@ function intersectTriangle(ray, triangle) {
     let v0 = triangle.v0;
     let v1 = triangle.v1;
     let v2 = triangle.v2;
-    if (vec3dot(ray.dir, vec3sub(v0, ray.origin)) < 0) return null;
+    // if (vec3dot(ray.dir, vec3sub(v0, ray.origin)) < 0) return null;
 
     let edge1 = vec3sub(v1, v0);
     let edge2 = vec3sub(v2, v0);
@@ -652,11 +653,11 @@ function traceRay(ray, depth, allowPortal=false) {
     let normal = hit.normal;
     let mat = hit.mat;
 
-    if (mat.isPortal && allowPortal) {
-        // Skip this hit: continue ray just past the wall
-        let newOrigin = vec3add(hit.position, vec3scale(1e-4, ray.dir));
-        return traceRay(makeRay(newOrigin, ray.dir), depth, false);
-    }
+    // if (mat.isPortal && allowPortal) {
+    //     // Skip this hit: continue ray just past the wall
+    //     let newOrigin = vec3add(hit.position, vec3scale(1e-4, ray.dir));
+    //     return traceRay(makeRay(newOrigin, ray.dir), depth, false);
+    // }
 
     // start with ambient light, then add contrib from every light source
     let finalColor = vec3mul(ambientLight, mat.color);
